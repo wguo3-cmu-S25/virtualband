@@ -168,6 +168,17 @@ function ChatBox({ uploadedFile, recordedBlob }) {
         }
     ]);
 
+    // Add ref for chat container
+    const chatContainerRef = useRef(null);
+
+    // Scroll to bottom when messages change
+    React.useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop =
+                chatContainerRef.current.scrollHeight;
+        }
+    }, [messages]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!input.trim()) return;
@@ -374,7 +385,10 @@ function ChatBox({ uploadedFile, recordedBlob }) {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+            <div
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto space-y-3 pr-2"
+            >
                 {messages.map((msg, idx) => (
                     <div
                         key={idx}
