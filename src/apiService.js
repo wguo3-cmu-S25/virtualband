@@ -1,6 +1,6 @@
 const API_BASE_URL = 'https://api.piapi.ai';
 const API_ENDPOINT = '/api/v1/task';
-const API_KEY = 'c2c35d1b76e0da360f76d521ff1584041fd7cdb3c5845382606f6bdc8eb2e8b4';
+const API_KEY = '875abc55839ffb0af6be0d48fbbe067d3e35a64fdb50c10cb8c1252bcde6e924';
 
 /**
  * Convert audio file to base64 string
