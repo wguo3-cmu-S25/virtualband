@@ -91,7 +91,7 @@ function App() {
             {/* Header */}
             <header className="text-center py-6 space-y-4">
                 <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
-                    Virtual Band AI
+                    Virtual Accompaniment AI
                 </h1>
                 <div className="flex flex-wrap justify-center gap-4">
                     <button
@@ -134,9 +134,7 @@ function App() {
                 )}
                 {audioURL && (
                     <div className="mt-6 text-center">
-                        <h3 className="text-lg font-semibold mb-2">
-                            Playback
-                        </h3>
+                        <h3 className="text-lg font-semibold mb-2">Playback</h3>
                         <audio
                             controls
                             src={audioURL}
@@ -203,8 +201,10 @@ function SelectionPanel({
 }) {
     return (
         <div className="bg-gray-900 p-6 rounded-xl shadow-lg h-full">
-            <h2 className="text-xl font-semibold mb-6 text-center">Music Configuration</h2>
-            
+            <h2 className="text-xl font-semibold mb-6 text-center">
+                Music Configuration
+            </h2>
+
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-2">
@@ -288,12 +288,17 @@ function SelectionPanel({
 
                 {/* Placeholder info */}
                 <div className="mt-8 p-4 bg-gray-800 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-2">How it works:</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                        How it works:
+                    </h3>
                     <ul className="text-sm text-gray-300 space-y-1">
                         <li>• Configure your music settings</li>
                         <li>• Enter lyrics in the chat →</li>
                         <li>• Get main track + album cover</li>
-                        <li>• Individual instrument tracks will appear after generation</li>
+                        <li>
+                            • Individual instrument tracks will appear after
+                            generation
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -325,7 +330,7 @@ function MockInstrumentTracks({ instruments, bpm, timeSignature }) {
     const playAllTracks = () => {
         if (isPlaying) {
             // Stop all tracks
-            Object.values(audioRefs.current).forEach(audio => {
+            Object.values(audioRefs.current).forEach((audio) => {
                 if (audio) {
                     audio.pause();
                     audio.currentTime = 0;
@@ -334,7 +339,7 @@ function MockInstrumentTracks({ instruments, bpm, timeSignature }) {
             setIsPlaying(false);
         } else {
             // Play all unmuted tracks
-            instrumentList.forEach(instrument => {
+            instrumentList.forEach((instrument) => {
                 if (!mutedTracks.has(instrument)) {
                     const audio = audioRefs.current[instrument];
                     if (audio) {
@@ -353,7 +358,9 @@ function MockInstrumentTracks({ instruments, bpm, timeSignature }) {
     return (
         <div className="mt-4 p-4 bg-gray-800 rounded-lg space-y-3">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">🎼 Individual Instrument Tracks</h3>
+                <h3 className="text-lg font-semibold">
+                    🎼 Individual Instrument Tracks
+                </h3>
                 <button
                     onClick={playAllTracks}
                     className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
@@ -365,7 +372,7 @@ function MockInstrumentTracks({ instruments, bpm, timeSignature }) {
                     {isPlaying ? "⏹️ Stop All" : "▶️ Play All"}
                 </button>
             </div>
-            
+
             <div className="space-y-2">
                 {instrumentList.map((instrument, index) => {
                     const isMuted = mutedTracks.has(instrument);
@@ -373,15 +380,19 @@ function MockInstrumentTracks({ instruments, bpm, timeSignature }) {
                     const mockTrackUrl = `https://mock.tracks/${encodeURIComponent(
                         instrument
                     )}_${bpm || "120"}bpm_${timeSignature || "4-4"}.mp3`;
-                    
+
                     return (
-                        <div key={index} className="flex items-center justify-between bg-gray-700 p-2 rounded-lg">
+                        <div
+                            key={index}
+                            className="flex items-center justify-between bg-gray-700 p-2 rounded-lg"
+                        >
                             <div className="flex items-center space-x-2">
                                 <span className="text-sm font-medium capitalize">
                                     {instrument}
                                 </span>
                                 <span className="text-xs text-gray-400">
-                                    {bpm || "120"} BPM • {timeSignature || "4/4"}
+                                    {bpm || "120"} BPM •{" "}
+                                    {timeSignature || "4/4"}
                                 </span>
                             </div>
                             <div className="flex items-center space-x-2">
@@ -398,16 +409,25 @@ function MockInstrumentTracks({ instruments, bpm, timeSignature }) {
                             </div>
                             {/* Hidden audio element for mock playback */}
                             <audio
-                                ref={el => audioRefs.current[instrument] = el}
+                                ref={(el) =>
+                                    (audioRefs.current[instrument] = el)
+                                }
                                 src={mockTrackUrl}
                                 loop
-                                style={{ display: 'none' }}
+                                style={{ display: "none" }}
                                 onEnded={() => {
                                     // If this was the last track playing, update play state
-                                    const stillPlaying = instrumentList.some(inst => {
-                                        const audio = audioRefs.current[inst];
-                                        return audio && !audio.paused && !mutedTracks.has(inst);
-                                    });
+                                    const stillPlaying = instrumentList.some(
+                                        (inst) => {
+                                            const audio =
+                                                audioRefs.current[inst];
+                                            return (
+                                                audio &&
+                                                !audio.paused &&
+                                                !mutedTracks.has(inst)
+                                            );
+                                        }
+                                    );
                                     if (!stillPlaying) {
                                         setIsPlaying(false);
                                     }
@@ -418,7 +438,7 @@ function MockInstrumentTracks({ instruments, bpm, timeSignature }) {
                     );
                 })}
             </div>
-            
+
             <div className="text-xs text-gray-400 text-center">
                 💡 Mock tracks - would play individual instrument stems
             </div>
@@ -427,7 +447,15 @@ function MockInstrumentTracks({ instruments, bpm, timeSignature }) {
 }
 
 // ChatBox component with instrument tracks after generation
-function ChatBox({ uploadedFile, recordedBlob, stylePrompt, taskType, instruments, bpm, timeSignature }) {
+function ChatBox({
+    uploadedFile,
+    recordedBlob,
+    stylePrompt,
+    taskType,
+    instruments,
+    bpm,
+    timeSignature
+}) {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [currentTaskId, setCurrentTaskId] = useState(null);
@@ -771,8 +799,8 @@ function ChatBox({ uploadedFile, recordedBlob, stylePrompt, taskType, instrument
                     >
                         <div
                             className={`p-3 text-sm rounded-xl ${
-                                msg.type === "audio" || msg.type === "image" 
-                                    ? "w-4/5" 
+                                msg.type === "audio" || msg.type === "image"
+                                    ? "w-4/5"
                                     : "max-w-xs"
                             } ${
                                 msg.sender === "user"
@@ -848,15 +876,15 @@ function ChatBox({ uploadedFile, recordedBlob, stylePrompt, taskType, instrument
                         </div>
                     </div>
                 ))}
-                
+
                 {/* Show instrument tracks after generation is complete */}
                 {showInstrumentTracks && (
                     <div className="flex justify-start">
                         <div className="bg-gray-700 p-3 text-sm rounded-xl max-w-full w-full">
-                            <MockInstrumentTracks 
-                                instruments={instruments} 
-                                bpm={bpm} 
-                                timeSignature={timeSignature} 
+                            <MockInstrumentTracks
+                                instruments={instruments}
+                                bpm={bpm}
+                                timeSignature={timeSignature}
                             />
                         </div>
                     </div>
