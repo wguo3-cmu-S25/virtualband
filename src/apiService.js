@@ -1,6 +1,6 @@
 const API_BASE_URL = 'https://api.piapi.ai';
 const API_ENDPOINT = '/api/v1/task';
-const API_KEY = 'ee3b39afa372157ed7d024a19bac4525ba3dcabb8a83ee85356ce7d1bffec1bc';
+const API_KEY = 'c2c35d1b76e0da360f76d521ff1584041fd7cdb3c5845382606f6bdc8eb2e8b4';
 
 /**
  * Convert audio file to base64 string
@@ -95,7 +95,7 @@ export const generateAudio = async ({
         console.log('API Response:', data);
         return {
             success: true,
-            data: data
+            data: data.data || data // Handle nested data structure
         };
 
     } catch (error) {
@@ -166,7 +166,7 @@ export const getTaskStatus = async (taskId) => {
         
         return {
             success: true,
-            data: data.data || data
+            data: data.data || data // Handle nested data structure
         };
 
     } catch (error) {
@@ -207,6 +207,8 @@ export const pollTaskStatus = async (taskId, onUpdate = () => {}, maxAttempts = 
             const taskData = result.data;
             const status = taskData.status;
             
+            console.log(`Polling attempt ${attempts}: Status = ${status}`, taskData);
+            
             onUpdate({
                 status: status,
                 message: `Attempt ${attempts}/${maxAttempts} - Status: ${status}`,
@@ -216,15 +218,39 @@ export const pollTaskStatus = async (taskId, onUpdate = () => {}, maxAttempts = 
 
             // Check if task is completed
             if (status === 'completed') {
-                // Extract the generated audio URL from works array
-                const works = taskData.works || [];
-                const audioWork = works.find(work => work.contentType === 'audio' || work.resource);
-                
-                if (audioWork && audioWork.resource) {
+                // Check for audio URL in output.audio_url (DiffRhythm format)
+                if (taskData.output && taskData.output.audio_url) {
                     return {
                         success: true,
                         completed: true,
-                        audioUrl: audioWork.resource.resource || audioWork.resource.resourceWithoutWatermark,
+                        audioUrl: taskData.output.audio_url,
+                        taskData: taskData
+                    };
+                }
+                
+                // Fallback: Extract the generated audio URL from works array (other APIs)
+                const works = taskData.works || [];
+                const audioWork = works.find(work => 
+                    work.contentType === 'audio' || 
+                    (work.resource && (work.resource.resource || work.resource.resourceWithoutWatermark))
+                );
+                
+                if (audioWork && audioWork.resource) {
+                    const audioUrl = audioWork.resource.resourceWithoutWatermark || audioWork.resource.resource;
+                    return {
+                        success: true,
+                        completed: true,
+                        audioUrl: audioUrl,
+                        taskData: taskData
+                    };
+                }
+                
+                // Alternative: Check if there's an output field with direct audio URL string
+                if (taskData.output && typeof taskData.output === 'string' && taskData.output.startsWith('http')) {
+                    return {
+                        success: true,
+                        completed: true,
+                        audioUrl: taskData.output,
                         taskData: taskData
                     };
                 }
@@ -232,7 +258,7 @@ export const pollTaskStatus = async (taskId, onUpdate = () => {}, maxAttempts = 
                 return {
                     success: true,
                     completed: true,
-                    message: 'Task completed but no audio found',
+                    message: 'Task completed but no audio URL found in response',
                     taskData: taskData
                 };
             }
