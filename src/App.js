@@ -2,7 +2,6 @@ import "./App.css";
 import React, { useRef, useState } from "react";
 import { generateAudio, convertAudioToBase64, convertBlobToBase64, formatLyricsWithTimestamps, validateApiKey, getGenerationInfo, pollTaskStatus, generateAlbumCover, pollImageTaskStatus, getImageGenerationInfo } from './apiService';
 
-
 function App() {
     const fileInputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
@@ -21,34 +20,45 @@ function App() {
         if (file) {
             setUploadedFile(file);
             setAudioURL(URL.createObjectURL(file));
+            setRecordedBlob(null); // Clear previous recording if uploading
+            setRecordedChunks([]);
         }
     };
 
+    // Enhanced recording functionality
     const handleRecordClick = async () => {
         if (isRecording) {
             // Stop recording
-            mediaRecorderRef.current.stop();
+            if (mediaRecorderRef.current) {
+                mediaRecorderRef.current.stop();
+            }
             setIsRecording(false);
         } else {
-            // Start recording
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: true
                 });
                 const mediaRecorder = new window.MediaRecorder(stream);
                 mediaRecorderRef.current = mediaRecorder;
-                setRecordedChunks([]);
+                let localChunks = []; // Use a local array for chunks
+
+                setRecordedChunks([]); // Clear previous recording
+                setRecordedBlob(null);
+                setUploadedFile(null); // Clear uploaded file if re-recording
+                setAudioURL(null);
+
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
-                        setRecordedChunks((prev) => prev.concat(event.data));
+                        localChunks.push(event.data);
                     }
                 };
                 mediaRecorder.onstop = () => {
-                    const blob = new Blob(recordedChunks, {
+                    const blob = new Blob(localChunks, {
                         type: "audio/webm"
                     });
                     setRecordedBlob(blob);
                     setAudioURL(URL.createObjectURL(blob));
+                    setRecordedChunks(localChunks); // Optionally update state
                 };
                 mediaRecorder.start();
                 setIsRecording(true);
@@ -60,9 +70,7 @@ function App() {
 
     return (
         <div className="App min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 text-white flex items-center justify-center p-6">
-
             <div className="w-full max-w-3xl space-y-6">
-
                 <header className="text-center space-y-4">
                     <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
                         Virtual Band AI
@@ -71,6 +79,7 @@ function App() {
                         <button
                             onClick={handleUploadClick}
                             className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg shadow transition-colors"
+                            disabled={isRecording}
                         >
                             Upload a Recording
                         </button>
@@ -83,31 +92,56 @@ function App() {
                         />
                         <button
                             onClick={handleRecordClick}
-                            className={`${isRecording ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
-                                } text-white px-6 py-2 rounded-lg transition-shadow shadow-md`}
+                            className={`${
+                                isRecording
+                                    ? "bg-red-600 hover:bg-red-700"
+                                    : "bg-green-600 hover:bg-green-700"
+                            } text-white px-6 py-2 rounded-lg transition-shadow shadow-md flex items-center gap-2`}
                         >
-                            {isRecording ? "Stop Recording" : "Record Yourself"}
+                            {isRecording ? (
+                                <>
+                                    <span className="animate-pulse inline-block w-3 h-3 bg-red-400 rounded-full mr-2"></span>
+                                    Stop Recording
+                                </>
+                            ) : (
+                                "Record Yourself"
+                            )}
                         </button>
                     </div>
+                    {isRecording && (
+                        <div className="mt-4 text-red-400 font-semibold flex items-center justify-center gap-2">
+                            <span className="animate-pulse inline-block w-3 h-3 bg-red-400 rounded-full"></span>
+                            Recording...
+                        </div>
+                    )}
                     {audioURL && (
                         <div className="mt-6 text-center">
-                            <h3 className="text-lg font-semibold mb-2">Playback</h3>
-                            <audio controls src={audioURL} className="w-full max-w-md mx-auto" />
+                            <h3 className="text-lg font-semibold mb-2">
+                                Playback
+                            </h3>
+                            <audio
+                                controls
+                                src={audioURL}
+                                className="w-full max-w-md mx-auto"
+                            />
                             <p className="text-sm text-gray-400 mt-2">
-                                {uploadedFile ? `Uploaded: ${uploadedFile.name}` : recordedBlob ? 'Recorded audio ready' : ''}
+                                {uploadedFile
+                                    ? `Uploaded: ${uploadedFile.name}`
+                                    : recordedBlob
+                                    ? "Recorded audio ready"
+                                    : ""}
                             </p>
                         </div>
                     )}
-                    
+
                     {/* Chatbox */}
-                    <ChatBox 
+                    <ChatBox
                         uploadedFile={uploadedFile}
                         recordedBlob={recordedBlob}
                     />
-
                 </header>
             </div>
-        </div >
+        </div>
     );
 }
 
@@ -127,6 +161,17 @@ function ChatBox({ uploadedFile, recordedBlob }) {
     const [messages, setMessages] = useState([
         { text: "Hi there! I can help you generate music and album covers! 🎵🎨\n\nProvide lyrics and I'll create audio AND an album cover for you. Upload reference audio or record yourself singing for style reference.\n\n💡 The system will automatically add timestamps to your lyrics, generate music, then create a matching album cover!", sender: "bot" },
     ]);
+
+    // Add ref for chat container
+    const chatContainerRef = useRef(null);
+
+    // Scroll to bottom when messages change
+    React.useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop =
+                chatContainerRef.current.scrollHeight;
+        }
+    }, [messages]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -375,7 +420,7 @@ function ChatBox({ uploadedFile, recordedBlob }) {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-3 pr-2">
                 {messages.map((msg, idx) => (
                     <div
                         key={idx}
