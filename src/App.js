@@ -1,6 +1,17 @@
 import "./App.css";
 import React, { useRef, useState } from "react";
-import { generateAudio, convertAudioToBase64, convertBlobToBase64, formatLyricsWithTimestamps, validateApiKey, getGenerationInfo, pollTaskStatus, generateAlbumCover, pollImageTaskStatus, getImageGenerationInfo } from './apiService';
+import {
+    generateAudio,
+    convertAudioToBase64,
+    convertBlobToBase64,
+    formatLyricsWithTimestamps,
+    validateApiKey,
+    getGenerationInfo,
+    pollTaskStatus,
+    generateAlbumCover,
+    pollImageTaskStatus,
+    getImageGenerationInfo
+} from "./apiService";
 
 function App() {
     const fileInputRef = useRef(null);
@@ -150,6 +161,10 @@ function ChatBox({ uploadedFile, recordedBlob }) {
     const [input, setInput] = useState("");
     const [stylePrompt, setStylePrompt] = useState("pop");
     const [taskType, setTaskType] = useState("txt2audio-base");
+    // New state for extra fields
+    const [instruments, setInstruments] = useState("");
+    const [bpm, setBpm] = useState("");
+    const [timeSignature, setTimeSignature] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [currentTaskId, setCurrentTaskId] = useState(null);
     const [currentImageTaskId, setCurrentImageTaskId] = useState(null);
@@ -159,7 +174,10 @@ function ChatBox({ uploadedFile, recordedBlob }) {
     const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
     const [currentLyrics, setCurrentLyrics] = useState("");
     const [messages, setMessages] = useState([
-        { text: "Hi there! I can help you generate music and album covers! 🎵🎨\n\nProvide lyrics and I'll create audio AND an album cover for you. Upload reference audio or record yourself singing for style reference.\n\n💡 The system will automatically add timestamps to your lyrics, generate music, then create a matching album cover!", sender: "bot" },
+        {
+            text: "Hi there! I can help you generate music and album covers! 🎵🎨\n\nProvide lyrics and I'll create audio AND an album cover for you. Upload reference audio or record yourself singing for style reference.\n\n💡 The system will automatically add timestamps to your lyrics, generate music, then create a matching album cover!",
+            sender: "bot"
+        }
     ]);
 
     // Add ref for chat container
@@ -179,7 +197,7 @@ function ChatBox({ uploadedFile, recordedBlob }) {
 
         // Add user message
         const userMessage = input;
-        setMessages(prev => [...prev, { text: userMessage, sender: "user" }]);
+        setMessages((prev) => [...prev, { text: userMessage, sender: "user" }]);
         setInput("");
         setIsLoading(true);
 
@@ -187,13 +205,13 @@ function ChatBox({ uploadedFile, recordedBlob }) {
             // Format lyrics with timestamps
             const formattedLyrics = formatLyricsWithTimestamps(userMessage);
             setCurrentLyrics(formattedLyrics);
-            
+
             // Reset previous generations
             setGeneratedAudioUrl(null);
             setGeneratedImageUrl(null);
-            
+
             // Convert audio to base64 if available
-            let styleAudio = '';
+            let styleAudio = "";
             if (uploadedFile) {
                 styleAudio = await convertAudioToBase64(uploadedFile);
             } else if (recordedBlob) {
@@ -203,53 +221,118 @@ function ChatBox({ uploadedFile, recordedBlob }) {
             // Get generation info
             const genInfo = getGenerationInfo(taskType);
             const imageInfo = getImageGenerationInfo();
-            
-            // Show processing message
-            setMessages(prev => [...prev, { 
-                text: `🎵 Generating ${genInfo.duration} of audio + album cover...\nStyle: ${stylePrompt}\nTask: ${taskType}\nCost: ${genInfo.cost} + ${imageInfo.cost} for cover\n\n🔄 Starting both music and album cover generation in parallel...`, 
-                sender: "bot" 
-            }]);
 
-            // Start both API calls in parallel
+            // Show processing message
+            setMessages((prev) => [
+                ...prev,
+                {
+                    text: `🎵 Generating ${genInfo.duration} of audio + album cover...\nStyle: ${stylePrompt}\nTask: ${taskType}\nCost: ${genInfo.cost} + ${imageInfo.cost} for cover\n\n🔄 Starting both music and album cover generation in parallel...`,
+                    sender: "bot"
+                }
+            ]);
+
+            // MOCK: For each instrument, return a mock track using the input info
+            const instrumentList = instruments
+                .split(",")
+                .map((i) => i.trim())
+                .filter((i) => i.length > 0);
+
+            if (instrumentList.length > 0) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        text: `🎼 Mock tracks generated for your instruments:`,
+                        sender: "bot"
+                    },
+                    ...instrumentList.map((inst) => ({
+                        text: `https://mock.tracks/${encodeURIComponent(
+                            inst
+                        )}_${bpm || "120"}bpm_${timeSignature || "4-4"}.mp3`,
+                        sender: "bot",
+                        type: "audio"
+                    }))
+                ]);
+            }
+
+            // Mock main music and album cover response
+            setTimeout(() => {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        text: `🎉 Complete! (MOCK) Your music and album cover are ready!\n\n🎵 Audio + 🎨 Album Cover:`,
+                        sender: "bot"
+                    },
+                    {
+                        text: "https://mock.tracks/main_song.mp3",
+                        sender: "bot",
+                        type: "audio"
+                    },
+                    {
+                        text: "https://mock.images/album_cover.png",
+                        sender: "bot",
+                        type: "image"
+                    }
+                ]);
+                setIsLoading(false);
+            }, 1200);
+
+            // Skip real API calls
+            /*
             const [musicResult, imageResult] = await Promise.all([
                 generateAudio({
                     lyrics: formattedLyrics,
                     stylePrompt: stylePrompt,
                     styleAudio: styleAudio,
-                    taskType: taskType
+                    taskType: taskType,
+                    instruments: instruments,
+                    bpm: bpm,
+                    timeSignature: timeSignature
                 }),
                 generateAlbumCover({
                     musicStyle: stylePrompt,
-                    lyrics: formattedLyrics
+                    lyrics: formattedLyrics,
+                    instruments: instruments,
+                    bpm: bpm,
+                    timeSignature: timeSignature
                 })
             ]);
+            */
 
             // Check if both API calls started successfully
+            /*
             if (musicResult.success && imageResult.success) {
                 const musicTaskId = musicResult.data.task_id;
                 const imageTaskId = imageResult.taskId;
-                
+
                 setCurrentTaskId(musicTaskId);
                 setCurrentImageTaskId(imageTaskId);
-                
-                setMessages(prev => [...prev, { 
-                    text: `✅ Both generations started!\n\n🔄 Generating music and album cover...`, 
-                    sender: "bot" 
-                }]);
+
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        text: `✅ Both generations started!\n\n🔄 Generating music and album cover...`,
+                        sender: "bot"
+                    }
+                ]);
 
                 // Start polling both tasks in parallel
                 setPollingActive(true);
                 setImagePollingActive(true);
-                
+
                 const [musicPollResult, imagePollResult] = await Promise.all([
                     pollTaskStatus(
                         musicTaskId,
                         (update) => {
                             // Simple music status update
-                            if (update.status === 'pending' || update.status === 'processing') {
-                                setMessages(prev => {
+                            if (
+                                update.status === "pending" ||
+                                update.status === "processing"
+                            ) {
+                                setMessages((prev) => {
                                     const newMessages = [...prev];
-                                    const lastBotIndex = newMessages.map(m => m.sender).lastIndexOf('bot');
+                                    const lastBotIndex = newMessages
+                                        .map((m) => m.sender)
+                                        .lastIndexOf("bot");
                                     if (lastBotIndex !== -1) {
                                         newMessages[lastBotIndex] = {
                                             ...newMessages[lastBotIndex],
@@ -260,108 +343,145 @@ function ChatBox({ uploadedFile, recordedBlob }) {
                                 });
                             }
                         },
-                        60, 5000
+                        60,
+                        5000
                     ),
                     pollImageTaskStatus(
                         imageTaskId,
                         () => {
                             // No detailed updates for image polling
                         },
-                        60, 5000
+                        60,
+                        5000
                     )
                 ]);
 
                 setPollingActive(false);
                 setImagePollingActive(false);
-                
+
                 // Handle results
-                if (musicPollResult.success && musicPollResult.completed && 
-                    imagePollResult.success && imagePollResult.completed) {
-                    
+                if (
+                    musicPollResult.success &&
+                    musicPollResult.completed &&
+                    imagePollResult.success &&
+                    imagePollResult.completed
+                ) {
                     if (musicPollResult.audioUrl && imagePollResult.imageUrl) {
                         // Both succeeded
                         setGeneratedAudioUrl(musicPollResult.audioUrl);
                         setGeneratedImageUrl(imagePollResult.imageUrl);
-                        
-                        setMessages(prev => [...prev, { 
-                            text: `🎉 Complete! Your music and album cover are ready!\n\n🎵 Audio + 🎨 Album Cover:`,
-                            sender: "bot" 
-                        }, {
-                            text: musicPollResult.audioUrl,
-                            sender: "bot",
-                            type: "audio"
-                        }, {
-                            text: imagePollResult.imageUrl,
-                            sender: "bot",
-                            type: "image"
-                        }]);
+
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                text: `🎉 Complete! Your music and album cover are ready!\n\n🎵 Audio + 🎨 Album Cover:`,
+                                sender: "bot"
+                            },
+                            {
+                                text: musicPollResult.audioUrl,
+                                sender: "bot",
+                                type: "audio"
+                            },
+                            {
+                                text: imagePollResult.imageUrl,
+                                sender: "bot",
+                                type: "image"
+                            }
+                        ]);
                     } else if (musicPollResult.audioUrl) {
                         // Only music succeeded
                         setGeneratedAudioUrl(musicPollResult.audioUrl);
-                        
-                        setMessages(prev => [...prev, { 
-                            text: `🎵 Music is ready!\n\n❌ Album cover generation failed.\n\nYou can still listen to your music:`,
-                            sender: "bot" 
-                        }, {
-                            text: musicPollResult.audioUrl,
-                            sender: "bot",
-                            type: "audio"
-                        }]);
+
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                text: `🎵 Music is ready!\n\n❌ Album cover generation failed.\n\nYou can still listen to your music:`,
+                                sender: "bot"
+                            },
+                            {
+                                text: musicPollResult.audioUrl,
+                                sender: "bot",
+                                type: "audio"
+                            }
+                        ]);
                     } else {
                         // Both failed or no URLs
-                        setMessages(prev => [...prev, { 
-                            text: `❌ Generation completed but no results found.\n\nPlease try again.`,
-                            sender: "bot" 
-                        }]);
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                text: `❌ Generation completed but no results found.\n\nPlease try again.`,
+                                sender: "bot"
+                            }
+                        ]);
                     }
                 } else {
                     // Handle partial failures
-                    if (musicPollResult.success && musicPollResult.completed && musicPollResult.audioUrl) {
+                    if (
+                        musicPollResult.success &&
+                        musicPollResult.completed &&
+                        musicPollResult.audioUrl
+                    ) {
                         // Music succeeded, image failed
                         setGeneratedAudioUrl(musicPollResult.audioUrl);
-                        
-                        setMessages(prev => [...prev, { 
-                            text: `🎵 Music is ready!\n\n❌ Album cover generation failed or timed out.\n\nYou can still listen to your music:`,
-                            sender: "bot" 
-                        }, {
-                            text: musicPollResult.audioUrl,
-                            sender: "bot",
-                            type: "audio"
-                        }]);
+
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                text: `🎵 Music is ready!\n\n❌ Album cover generation failed or timed out.\n\nYou can still listen to your music:`,
+                                sender: "bot"
+                            },
+                            {
+                                text: musicPollResult.audioUrl,
+                                sender: "bot",
+                                type: "audio"
+                            }
+                        ]);
                     } else {
                         // Music failed
-                        const errorMsg = musicPollResult.timeout ? 
-                            `⏰ Generation timeout reached.` :
-                            `❌ Generation failed: ${musicPollResult.error || imagePollResult.error}`;
-                            
-                        setMessages(prev => [...prev, { 
-                            text: errorMsg,
-                            sender: "bot" 
-                        }]);
+                        const errorMsg = musicPollResult.timeout
+                            ? `⏰ Generation timeout reached.`
+                            : `❌ Generation failed: ${
+                                  musicPollResult.error || imagePollResult.error
+                              }`;
+
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                text: errorMsg,
+                                sender: "bot"
+                            }
+                        ]);
                     }
                 }
-                
             } else {
                 // One or both API calls failed to start
                 let errorMsg = `❌ Error starting generation:\n`;
-                if (!musicResult.success) errorMsg += `Music: ${musicResult.error}\n`;
-                if (!imageResult.success) errorMsg += `Image: ${imageResult.error}\n`;
+                if (!musicResult.success)
+                    errorMsg += `Music: ${musicResult.error}\n`;
+                if (!imageResult.success)
+                    errorMsg += `Image: ${imageResult.error}\n`;
                 errorMsg += `\nPlease try again.`;
-                
-                setMessages(prev => [...prev, { 
-                    text: errorMsg, 
-                    sender: "bot" 
-                }]);
-            }
 
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        text: errorMsg,
+                        sender: "bot"
+                    }
+                ]);
+            }
+            */
         } catch (error) {
-            console.error('Error:', error);
-            setMessages(prev => [...prev, { 
-                text: `❌ Error: ${error.message}`, 
-                sender: "bot" 
-            }]);
+            console.error("Error:", error);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    text: `❌ Error: ${error.message}`,
+                    sender: "bot"
+                }
+            ]);
         } finally {
-            setIsLoading(false);
+            // setIsLoading(false); // moved to setTimeout above
         }
     };
 
@@ -370,18 +490,34 @@ function ChatBox({ uploadedFile, recordedBlob }) {
             <h2 className="text-xl font-semibold mb-4">Let's make music!</h2>
 
             {/* Status Indicator */}
-            {(currentTaskId || currentImageTaskId || pollingActive || imagePollingActive) && (
+            {(currentTaskId ||
+                currentImageTaskId ||
+                pollingActive ||
+                imagePollingActive) && (
                 <div className="mb-3 p-2 bg-blue-900 bg-opacity-50 rounded-lg text-xs space-y-1">
                     {currentTaskId && (
                         <div className="flex items-center justify-between">
-                            <span>🎵 Music: {currentTaskId?.substring(0, 8)}...</span>
-                            {pollingActive && <span className="animate-pulse">🔄 Generating...</span>}
+                            <span>
+                                🎵 Music: {currentTaskId?.substring(0, 8)}...
+                            </span>
+                            {pollingActive && (
+                                <span className="animate-pulse">
+                                    🔄 Generating...
+                                </span>
+                            )}
                         </div>
                     )}
                     {currentImageTaskId && (
                         <div className="flex items-center justify-between">
-                            <span>🎨 Cover: {currentImageTaskId?.substring(0, 8)}...</span>
-                            {imagePollingActive && <span className="animate-pulse">🔄 Creating...</span>}
+                            <span>
+                                🎨 Cover: {currentImageTaskId?.substring(0, 8)}
+                                ...
+                            </span>
+                            {imagePollingActive && (
+                                <span className="animate-pulse">
+                                    🔄 Creating...
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -390,9 +526,11 @@ function ChatBox({ uploadedFile, recordedBlob }) {
             {/* Controls */}
             <div className="mb-4 space-y-2">
                 <div>
-                    <label className="block text-xs font-medium mb-1">Music Style</label>
-                    <select 
-                        value={stylePrompt} 
+                    <label className="block text-xs font-medium mb-1">
+                        Music Style
+                    </label>
+                    <select
+                        value={stylePrompt}
                         onChange={(e) => setStylePrompt(e.target.value)}
                         className="w-full bg-gray-700 text-white text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
@@ -407,38 +545,110 @@ function ChatBox({ uploadedFile, recordedBlob }) {
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs font-medium mb-1">Duration</label>
-                    <select 
-                        value={taskType} 
+                    <label className="block text-xs font-medium mb-1">
+                        Duration
+                    </label>
+                    <select
+                        value={taskType}
                         onChange={(e) => setTaskType(e.target.value)}
                         className="w-full bg-gray-700 text-white text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
-                        <option value="txt2audio-base">Short (1.35 min) - $0.02</option>
-                        <option value="txt2audio-full">Full (4.45 min) - $0.02</option>
+                        <option value="txt2audio-base">
+                            Short (1.35 min) - $0.02
+                        </option>
+                        <option value="txt2audio-full">
+                            Full (4.45 min) - $0.02
+                        </option>
                     </select>
+                </div>
+                {/* New extra input fields */}
+                <div>
+                    <label className="block text-xs font-medium mb-1">
+                        Instruments (comma separated)
+                    </label>
+                    <input
+                        type="text"
+                        value={instruments}
+                        onChange={(e) => setInstruments(e.target.value)}
+                        placeholder="e.g. piano, guitar, drums"
+                        className="w-full bg-gray-700 text-white text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                </div>
+                <div className="flex space-x-2">
+                    <div className="flex-1">
+                        <label className="block text-xs font-medium mb-1">
+                            BPM
+                        </label>
+                        <input
+                            type="number"
+                            min="40"
+                            max="300"
+                            value={bpm}
+                            onChange={(e) => setBpm(e.target.value)}
+                            placeholder="e.g. 120"
+                            className="w-full bg-gray-700 text-white text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <label className="block text-xs font-medium mb-1">
+                            Time Signature
+                        </label>
+                        <input
+                            type="text"
+                            value={timeSignature}
+                            onChange={(e) => setTimeSignature(e.target.value)}
+                            placeholder="e.g. 4/4"
+                            className="w-full bg-gray-700 text-white text-xs p-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
                 </div>
             </div>
 
             {/* Messages */}
-            <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-3 pr-2">
+            <div
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto space-y-3 pr-2"
+            >
                 {messages.map((msg, idx) => (
                     <div
                         key={idx}
-                        className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                        className={`flex ${
+                            msg.sender === "user"
+                                ? "justify-end"
+                                : "justify-start"
+                        }`}
                     >
-                        <div className={`p-3 text-sm rounded-xl max-w-xs ${msg.sender === "user" ? "bg-blue-500 text-white" : "bg-gray-700"}`}>
+                        <div
+                            className={`p-3 text-sm rounded-xl max-w-xs ${
+                                msg.sender === "user"
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-700"
+                            }`}
+                        >
                             {msg.type === "audio" ? (
                                 <div className="space-y-2">
-                                    <p className="text-xs text-gray-300">🎵 Generated Audio:</p>
+                                    <p className="text-xs text-gray-300">
+                                        🎵 Generated Audio:
+                                    </p>
                                     <audio controls className="w-full">
-                                        <source src={msg.text} type="audio/mpeg" />
-                                        <source src={msg.text} type="audio/wav" />
-                                        <source src={msg.text} type="audio/webm" />
-                                        Your browser does not support the audio element.
+                                        <source
+                                            src={msg.text}
+                                            type="audio/mpeg"
+                                        />
+                                        <source
+                                            src={msg.text}
+                                            type="audio/wav"
+                                        />
+                                        <source
+                                            src={msg.text}
+                                            type="audio/webm"
+                                        />
+                                        Your browser does not support the audio
+                                        element.
                                     </audio>
-                                    <a 
-                                        href={msg.text} 
-                                        target="_blank" 
+                                    <a
+                                        href={msg.text}
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-blue-300 hover:text-blue-200 text-xs underline block"
                                     >
@@ -447,22 +657,28 @@ function ChatBox({ uploadedFile, recordedBlob }) {
                                 </div>
                             ) : msg.type === "image" ? (
                                 <div className="space-y-2">
-                                    <p className="text-xs text-gray-300">🎨 Album Cover:</p>
-                                    <img 
-                                        src={msg.text} 
-                                        alt="Generated Album Cover" 
+                                    <p className="text-xs text-gray-300">
+                                        🎨 Album Cover:
+                                    </p>
+                                    <img
+                                        src={msg.text}
+                                        alt="Generated Album Cover"
                                         className="w-full max-w-[200px] rounded-lg shadow-md"
                                         onError={(e) => {
-                                            e.target.style.display = 'none';
-                                            e.target.nextSibling.style.display = 'block';
+                                            e.target.style.display = "none";
+                                            e.target.nextSibling.style.display =
+                                                "block";
                                         }}
                                     />
-                                    <div style={{display: 'none'}} className="text-red-300 text-xs">
+                                    <div
+                                        style={{ display: "none" }}
+                                        className="text-red-300 text-xs"
+                                    >
                                         ❌ Failed to load image
                                     </div>
-                                    <a 
-                                        href={msg.text} 
-                                        target="_blank" 
+                                    <a
+                                        href={msg.text}
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-blue-300 hover:text-blue-200 text-xs underline block"
                                     >
@@ -470,7 +686,9 @@ function ChatBox({ uploadedFile, recordedBlob }) {
                                     </a>
                                 </div>
                             ) : (
-                                <pre className="whitespace-pre-wrap font-sans">{msg.text}</pre>
+                                <pre className="whitespace-pre-wrap font-sans">
+                                    {msg.text}
+                                </pre>
                             )}
                         </div>
                     </div>
@@ -490,10 +708,21 @@ function ChatBox({ uploadedFile, recordedBlob }) {
                 <div className="flex items-center space-x-2">
                     <button
                         type="submit"
-                        disabled={isLoading || pollingActive || imagePollingActive || !input.trim()}
+                        disabled={
+                            isLoading ||
+                            pollingActive ||
+                            imagePollingActive ||
+                            !input.trim()
+                        }
                         className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm px-5 py-2 rounded-lg transition"
                     >
-                        {imagePollingActive ? "🎨 Creating cover..." : pollingActive ? "🔄 Generating music..." : isLoading ? "🎵 Starting..." : "🎤 Generate Music + Cover"}
+                        {imagePollingActive
+                            ? "🎨 Creating cover..."
+                            : pollingActive
+                            ? "🔄 Generating music..."
+                            : isLoading
+                            ? "🎵 Starting..."
+                            : "🎤 Generate Music + Cover"}
                     </button>
                 </div>
             </form>
