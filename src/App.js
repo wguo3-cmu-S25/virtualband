@@ -1,6 +1,6 @@
-import logo from "./logo.svg";
 import "./App.css";
 import React, { useRef, useState } from "react";
+
 
 function App() {
     const fileInputRef = useRef(null);
@@ -55,77 +55,103 @@ function App() {
     };
 
     return (
-        <div className="App">
-            <header className="App-header">
-                <h1>
-                    Would you like to upload a recording or record yourself?
-                </h1>
-                <div style={{ margin: "20px" }}>
-                    <button
-                        onClick={handleUploadClick}
-                        style={{ marginRight: "10px" }}
-                    >
-                        Upload a Recording
-                    </button>
-                    <input
-                        type="file"
-                        accept="audio/*"
-                        ref={fileInputRef}
-                        style={{ display: "none" }}
-                        onChange={handleFileChange}
-                    />
-                    <button onClick={handleRecordClick}>
-                        {isRecording ? "Stop Recording" : "Record Yourself"}
-                    </button>
-                </div>
-                {audioURL && (
-                    <div style={{ marginTop: "20px" }}>
-                        <h3>Playback:</h3>
-                        <audio controls src={audioURL}></audio>
+        <div className="App min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 text-white flex items-center justify-center p-6">
+
+            <div className="w-full max-w-3xl space-y-6">
+
+                <header className="text-center space-y-4">
+                    <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+                        Would you like to upload a recording or record yourself?
+                    </h1>
+                    <div className="flex flex-wrap justify-center gap-4 mt-4">
+                        <button
+                            onClick={handleUploadClick}
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg shadow transition-colors"
+                        >
+                            Upload a Recording
+                        </button>
+                        <input
+                            type="file"
+                            accept="audio/*"
+                            ref={fileInputRef}
+                            className="hidden"
+                            onChange={handleFileChange}
+                        />
+                        <button
+                            onClick={handleRecordClick}
+                            className={`${isRecording ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+                                } text-white px-6 py-2 rounded-lg transition-shadow shadow-md`}
+                        >
+                            {isRecording ? "Stop Recording" : "Record Yourself"}
+                        </button>
                     </div>
-                )}
-                {/* Chatbox */}
-                <ChatBox />
-            </header>
-        </div>
+                    {audioURL && (
+                        <div className="mt-6 text-center">
+                            <h3 className="text-lg font-semibold mb-2">Playback</h3>
+                            <audio controls src={audioURL} className="w-full max-w-md mx-auto" />
+                        </div>
+                    )}
+                    {/* Chatbox */}
+                    <ChatBox />
+
+                </header>
+            </div>
+        </div >
     );
 }
 
 // ChatBox component
 function ChatBox() {
     const [input, setInput] = useState("");
-    const [submittedPrompt, setSubmittedPrompt] = useState(null);
+    const [messages, setMessages] = useState([
+        { text: "Hi there! How can I help you today?", sender: "bot" },
+    ]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (input.trim()) {
-            setSubmittedPrompt(input);
+            setMessages([...messages, { text: input, sender: "user" }]);
             setInput("");
         }
     };
 
     return (
-        <div style={{ marginTop: "40px", width: "100%", maxWidth: "400px" }}>
-            <form onSubmit={handleSubmit} style={{ display: "flex" }}>
+        <div className="max-w-md mx-auto bg-gray-900 p-4 rounded-xl shadow-lg text-white flex flex-col h-[500px] mt-10 w-full">
+            <h2 className="text-xl font-semibold mb-4">Virtual Band</h2>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+                {messages.map((msg, idx) => (
+                    <div
+                        key={idx}
+                        className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                        <div className={`p-3 text-sm rounded-xl max-w-xs ${msg.sender === "user" ? "bg-blue-500 text-white" : "bg-gray-700"}`}>
+
+                            {msg.text}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Input */}
+            <form onSubmit={handleSubmit} className="mt-4 flex items-center space-x-2">
                 <input
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Enter your prompt..."
-                    style={{ flex: 1, padding: "8px" }}
+                    placeholder="Type a message..."
+                    className="flex-1 bg-gray-700 text-sm text-white placeholder-gray-400 p-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button type="submit" style={{ marginLeft: "8px" }}>
-                    Submit
+
+                <button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2 rounded-full transition"
+                >
+                    Send
                 </button>
             </form>
-            {submittedPrompt && (
-                <div style={{ marginTop: "16px", textAlign: "left" }}>
-                    <strong>Your prompt:</strong>
-                    <div>{submittedPrompt}</div>
-                </div>
-            )}
         </div>
     );
 }
-
 export default App;
