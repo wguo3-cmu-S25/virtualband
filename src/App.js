@@ -1,6 +1,6 @@
 import "./App.css";
 import React, { useRef, useState } from "react";
-import { generateAudio, convertAudioToBase64, convertBlobToBase64, formatLyricsWithTimestamps, validateApiKey, getGenerationInfo, pollTaskStatus } from './apiService';
+import { generateAudio, convertAudioToBase64, convertBlobToBase64, formatLyricsWithTimestamps, validateApiKey, getGenerationInfo, pollTaskStatus, generateAlbumCover, pollImageTaskStatus, getImageGenerationInfo } from './apiService';
 
 
 function App() {
@@ -118,9 +118,14 @@ function ChatBox({ uploadedFile, recordedBlob }) {
     const [taskType, setTaskType] = useState("txt2audio-base");
     const [isLoading, setIsLoading] = useState(false);
     const [currentTaskId, setCurrentTaskId] = useState(null);
+    const [currentImageTaskId, setCurrentImageTaskId] = useState(null);
     const [pollingActive, setPollingActive] = useState(false);
+    const [imagePollingActive, setImagePollingActive] = useState(false);
+    const [generatedAudioUrl, setGeneratedAudioUrl] = useState(null);
+    const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
+    const [currentLyrics, setCurrentLyrics] = useState("");
     const [messages, setMessages] = useState([
-        { text: "Hi there! I can help you generate music! 🎵\n\nProvide lyrics and I'll create audio for you. Upload reference audio or record yourself singing for style reference.\n\n💡 The system will automatically add timestamps to your lyrics and poll for results until your music is ready!", sender: "bot" },
+        { text: "Hi there! I can help you generate music and album covers! 🎵🎨\n\nProvide lyrics and I'll create audio AND an album cover for you. Upload reference audio or record yourself singing for style reference.\n\n💡 The system will automatically add timestamps to your lyrics, generate music, then create a matching album cover!", sender: "bot" },
     ]);
 
     const handleSubmit = async (e) => {
@@ -136,6 +141,11 @@ function ChatBox({ uploadedFile, recordedBlob }) {
         try {
             // Format lyrics with timestamps
             const formattedLyrics = formatLyricsWithTimestamps(userMessage);
+            setCurrentLyrics(formattedLyrics);
+            
+            // Reset previous generations
+            setGeneratedAudioUrl(null);
+            setGeneratedImageUrl(null);
             
             // Convert audio to base64 if available
             let styleAudio = '';
@@ -147,88 +157,154 @@ function ChatBox({ uploadedFile, recordedBlob }) {
 
             // Get generation info
             const genInfo = getGenerationInfo(taskType);
+            const imageInfo = getImageGenerationInfo();
             
             // Show processing message
             setMessages(prev => [...prev, { 
-                text: `🎵 Generating ${genInfo.duration} of audio...\nStyle: ${stylePrompt}\nTask: ${taskType}\nCost: ${genInfo.cost}\n\nThis may take a few moments...`, 
+                text: `🎵 Generating ${genInfo.duration} of audio + album cover...\nStyle: ${stylePrompt}\nTask: ${taskType}\nCost: ${genInfo.cost} + ${imageInfo.cost} for cover\n\n🔄 Starting both music and album cover generation in parallel...`, 
                 sender: "bot" 
             }]);
 
-            // Call API
-            const result = await generateAudio({
-                lyrics: formattedLyrics,
-                stylePrompt: stylePrompt,
-                styleAudio: styleAudio,
-                taskType: taskType
-            });
+            // Start both API calls in parallel
+            const [musicResult, imageResult] = await Promise.all([
+                generateAudio({
+                    lyrics: formattedLyrics,
+                    stylePrompt: stylePrompt,
+                    styleAudio: styleAudio,
+                    taskType: taskType
+                }),
+                generateAlbumCover({
+                    musicStyle: stylePrompt,
+                    lyrics: formattedLyrics
+                })
+            ]);
 
-            if (result.success) {
-                const taskId = result.data.task_id;
-                setCurrentTaskId(taskId);
+            // Check if both API calls started successfully
+            if (musicResult.success && imageResult.success) {
+                const musicTaskId = musicResult.data.task_id;
+                const imageTaskId = imageResult.taskId;
+                
+                setCurrentTaskId(musicTaskId);
+                setCurrentImageTaskId(imageTaskId);
                 
                 setMessages(prev => [...prev, { 
-                    text: `✅ Audio generation started!\n\nTask ID: ${taskId}\n\n🔄 Now polling for results... This usually takes about 20 seconds.`, 
+                    text: `✅ Both generations started!\n\n🔄 Generating music and album cover...`, 
                     sender: "bot" 
                 }]);
 
-                // Start polling for results
+                // Start polling both tasks in parallel
                 setPollingActive(true);
+                setImagePollingActive(true);
                 
-                const pollResult = await pollTaskStatus(
-                    taskId,
-                    (update) => {
-                        // Update messages with polling progress
-                        if (update.status === 'pending' || update.status === 'processing') {
-                            setMessages(prev => {
-                                const newMessages = [...prev];
-                                // Update the last bot message with polling status
-                                const lastBotIndex = newMessages.map(m => m.sender).lastIndexOf('bot');
-                                if (lastBotIndex !== -1) {
-                                    newMessages[lastBotIndex] = {
-                                        ...newMessages[lastBotIndex],
-                                        text: `✅ Audio generation started!\n\nTask ID: ${taskId}\n\n🔄 ${update.message}\nStatus: ${update.status}`
-                                    };
-                                }
-                                return newMessages;
-                            });
-                        }
-                    },
-                    60, // max attempts
-                    5000 // 5 second intervals
-                );
+                const [musicPollResult, imagePollResult] = await Promise.all([
+                    pollTaskStatus(
+                        musicTaskId,
+                        (update) => {
+                            // Simple music status update
+                            if (update.status === 'pending' || update.status === 'processing') {
+                                setMessages(prev => {
+                                    const newMessages = [...prev];
+                                    const lastBotIndex = newMessages.map(m => m.sender).lastIndexOf('bot');
+                                    if (lastBotIndex !== -1) {
+                                        newMessages[lastBotIndex] = {
+                                            ...newMessages[lastBotIndex],
+                                            text: `✅ Both generations started!\n\n🔄 Generating music and album cover...`
+                                        };
+                                    }
+                                    return newMessages;
+                                });
+                            }
+                        },
+                        60, 5000
+                    ),
+                    pollImageTaskStatus(
+                        imageTaskId,
+                        () => {
+                            // No detailed updates for image polling
+                        },
+                        60, 5000
+                    )
+                ]);
 
                 setPollingActive(false);
+                setImagePollingActive(false);
                 
-                if (pollResult.success && pollResult.completed) {
-                    if (pollResult.audioUrl) {
+                // Handle results
+                if (musicPollResult.success && musicPollResult.completed && 
+                    imagePollResult.success && imagePollResult.completed) {
+                    
+                    if (musicPollResult.audioUrl && imagePollResult.imageUrl) {
+                        // Both succeeded
+                        setGeneratedAudioUrl(musicPollResult.audioUrl);
+                        setGeneratedImageUrl(imagePollResult.imageUrl);
+                        
                         setMessages(prev => [...prev, { 
-                            text: `🎉 Music generation completed!\n\n🎵 Your audio is ready!\n\nYou can listen to it below:`,
+                            text: `🎉 Complete! Your music and album cover are ready!\n\n🎵 Audio + 🎨 Album Cover:`,
                             sender: "bot" 
                         }, {
-                            text: pollResult.audioUrl,
+                            text: musicPollResult.audioUrl,
+                            sender: "bot",
+                            type: "audio"
+                        }, {
+                            text: imagePollResult.imageUrl,
+                            sender: "bot",
+                            type: "image"
+                        }]);
+                    } else if (musicPollResult.audioUrl) {
+                        // Only music succeeded
+                        setGeneratedAudioUrl(musicPollResult.audioUrl);
+                        
+                        setMessages(prev => [...prev, { 
+                            text: `🎵 Music is ready!\n\n❌ Album cover generation failed.\n\nYou can still listen to your music:`,
+                            sender: "bot" 
+                        }, {
+                            text: musicPollResult.audioUrl,
                             sender: "bot",
                             type: "audio"
                         }]);
                     } else {
+                        // Both failed or no URLs
                         setMessages(prev => [...prev, { 
-                            text: `✅ Generation completed!\n\n${pollResult.message || 'Task finished successfully.'}`,
+                            text: `❌ Generation completed but no results found.\n\nPlease try again.`,
                             sender: "bot" 
                         }]);
                     }
                 } else {
-                    const errorMsg = pollResult.timeout ? 
-                        `⏰ Polling timeout reached.\n\nYour music is still being generated. You can check the status manually with Task ID: ${taskId}` :
-                        `❌ Generation failed:\n${pollResult.error}`;
+                    // Handle partial failures
+                    if (musicPollResult.success && musicPollResult.completed && musicPollResult.audioUrl) {
+                        // Music succeeded, image failed
+                        setGeneratedAudioUrl(musicPollResult.audioUrl);
                         
-                    setMessages(prev => [...prev, { 
-                        text: errorMsg,
-                        sender: "bot" 
-                    }]);
+                        setMessages(prev => [...prev, { 
+                            text: `🎵 Music is ready!\n\n❌ Album cover generation failed or timed out.\n\nYou can still listen to your music:`,
+                            sender: "bot" 
+                        }, {
+                            text: musicPollResult.audioUrl,
+                            sender: "bot",
+                            type: "audio"
+                        }]);
+                    } else {
+                        // Music failed
+                        const errorMsg = musicPollResult.timeout ? 
+                            `⏰ Generation timeout reached.` :
+                            `❌ Generation failed: ${musicPollResult.error || imagePollResult.error}`;
+                            
+                        setMessages(prev => [...prev, { 
+                            text: errorMsg,
+                            sender: "bot" 
+                        }]);
+                    }
                 }
                 
             } else {
+                // One or both API calls failed to start
+                let errorMsg = `❌ Error starting generation:\n`;
+                if (!musicResult.success) errorMsg += `Music: ${musicResult.error}\n`;
+                if (!imageResult.success) errorMsg += `Image: ${imageResult.error}\n`;
+                errorMsg += `\nPlease try again.`;
+                
                 setMessages(prev => [...prev, { 
-                    text: `❌ Error starting generation:\n${result.error}\n\nPlease try again.`, 
+                    text: errorMsg, 
                     sender: "bot" 
                 }]);
             }
@@ -249,12 +325,20 @@ function ChatBox({ uploadedFile, recordedBlob }) {
             <h2 className="text-xl font-semibold mb-4">Let's make music!</h2>
 
             {/* Status Indicator */}
-            {(currentTaskId || pollingActive) && (
-                <div className="mb-3 p-2 bg-blue-900 bg-opacity-50 rounded-lg text-xs">
-                    <div className="flex items-center justify-between">
-                        <span>Task: {currentTaskId?.substring(0, 8)}...</span>
-                        {pollingActive && <span className="animate-pulse">🔄 Polling...</span>}
-                    </div>
+            {(currentTaskId || currentImageTaskId || pollingActive || imagePollingActive) && (
+                <div className="mb-3 p-2 bg-blue-900 bg-opacity-50 rounded-lg text-xs space-y-1">
+                    {currentTaskId && (
+                        <div className="flex items-center justify-between">
+                            <span>🎵 Music: {currentTaskId?.substring(0, 8)}...</span>
+                            {pollingActive && <span className="animate-pulse">🔄 Generating...</span>}
+                        </div>
+                    )}
+                    {currentImageTaskId && (
+                        <div className="flex items-center justify-between">
+                            <span>🎨 Cover: {currentImageTaskId?.substring(0, 8)}...</span>
+                            {imagePollingActive && <span className="animate-pulse">🔄 Creating...</span>}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -316,6 +400,30 @@ function ChatBox({ uploadedFile, recordedBlob }) {
                                         🔗 Open in new tab
                                     </a>
                                 </div>
+                            ) : msg.type === "image" ? (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-gray-300">🎨 Album Cover:</p>
+                                    <img 
+                                        src={msg.text} 
+                                        alt="Generated Album Cover" 
+                                        className="w-full max-w-[200px] rounded-lg shadow-md"
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.style.display = 'block';
+                                        }}
+                                    />
+                                    <div style={{display: 'none'}} className="text-red-300 text-xs">
+                                        ❌ Failed to load image
+                                    </div>
+                                    <a 
+                                        href={msg.text} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-blue-300 hover:text-blue-200 text-xs underline block"
+                                    >
+                                        🔗 Open in new tab
+                                    </a>
+                                </div>
                             ) : (
                                 <pre className="whitespace-pre-wrap font-sans">{msg.text}</pre>
                             )}
@@ -329,18 +437,18 @@ function ChatBox({ uploadedFile, recordedBlob }) {
                 <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Enter your lyrics here... (auto-timestamped + style from uploaded audio)"
+                    placeholder="Enter your lyrics here... (auto-timestamped + matching album cover will be generated)"
                     className="w-full bg-gray-700 text-sm text-white placeholder-gray-400 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     rows="3"
-                    disabled={isLoading || pollingActive}
+                    disabled={isLoading || pollingActive || imagePollingActive}
                 />
                 <div className="flex items-center space-x-2">
                     <button
                         type="submit"
-                        disabled={isLoading || pollingActive || !input.trim()}
+                        disabled={isLoading || pollingActive || imagePollingActive || !input.trim()}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm px-5 py-2 rounded-lg transition"
                     >
-                        {pollingActive ? "🔄 Waiting for results..." : isLoading ? "🎵 Generating..." : "🎤 Generate Music"}
+                        {imagePollingActive ? "🎨 Creating cover..." : pollingActive ? "🔄 Generating music..." : isLoading ? "🎵 Starting..." : "🎤 Generate Music + Cover"}
                     </button>
                 </div>
             </form>
