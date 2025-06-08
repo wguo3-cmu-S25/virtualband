@@ -87,9 +87,9 @@ function App() {
     };
 
     return (
-        <div className="App min-h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 text-white">
+        <div className="App h-screen bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 text-white overflow-hidden">
             {/* Header */}
-            <header className="text-center py-6 space-y-4">
+            <header className="text-center py-3 space-y-2">
                 <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
                     Virtual Accompaniment AI
                 </h1>
@@ -133,14 +133,14 @@ function App() {
                     </div>
                 )}
                 {audioURL && (
-                    <div className="mt-6 text-center">
-                        <h3 className="text-lg font-semibold mb-2">Playback</h3>
+                    <div className="mt-3 text-center">
+                        <h3 className="text-sm font-medium mb-1">Playback</h3>
                         <audio
                             controls
                             src={audioURL}
                             className="w-full max-w-md mx-auto"
                         />
-                        <p className="text-sm text-gray-400 mt-2">
+                        <p className="text-xs text-gray-400 mt-1">
                             {uploadedFile
                                 ? `Uploaded: ${uploadedFile.name}`
                                 : recordedBlob
@@ -152,7 +152,7 @@ function App() {
             </header>
 
             {/* Main Content - Split Layout */}
-            <div className="flex gap-6 px-6 pb-6 min-h-[calc(100vh-300px)]">
+            <div className="flex gap-6 px-6 pb-4 h-[calc(100vh-180px)]">
                 {/* Left Panel - Selection Controls */}
                 <div className="w-1/2">
                     <SelectionPanel
@@ -200,7 +200,7 @@ function SelectionPanel({
     setTimeSignature
 }) {
     return (
-        <div className="bg-gray-900 p-6 rounded-xl shadow-lg h-full">
+        <div className="bg-gray-900 p-6 rounded-xl shadow-lg h-full overflow-y-auto">
             <h2 className="text-xl font-semibold mb-6 text-center">
                 Music Configuration
             </h2>
