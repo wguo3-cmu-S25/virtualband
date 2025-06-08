@@ -65,7 +65,7 @@ function App() {
 
                 <header className="text-center space-y-4">
                     <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
-                        Would you like to upload a recording or record yourself?
+                        Virtual Band AI
                     </h1>
                     <div className="flex flex-wrap justify-center gap-4 mt-4">
                         <button
@@ -245,9 +245,9 @@ function ChatBox({ uploadedFile, recordedBlob }) {
     };
 
     return (
-        <div className="max-w-md mx-auto bg-gray-900 p-4 rounded-xl shadow-lg text-white flex flex-col h-[600px] mt-10 w-full">
-            <h2 className="text-xl font-semibold mb-4">Virtual Band AI</h2>
-            
+        <div className="max-w-lg mx-auto bg-gray-900 p-4 rounded-xl shadow-lg text-white flex flex-col h-[600px] mt-10 w-full">
+            <h2 className="text-xl font-semibold mb-4">Let's make music!</h2>
+
             {/* Status Indicator */}
             {(currentTaskId || pollingActive) && (
                 <div className="mb-3 p-2 bg-blue-900 bg-opacity-50 rounded-lg text-xs">
