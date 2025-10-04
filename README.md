@@ -1,70 +1,150 @@
-# Getting Started with Create React App
+# Virtual Band AI 🎵
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A React-based web application that generates AI music and album covers from lyrics. Upload reference audio or record yourself singing, and the AI will create a complete musical accompaniment with matching album artwork.
 
-## Available Scripts
+## ✨ Features
 
-In the project directory, you can run:
+- **AI Music Generation**: Create music from lyrics using DiffRhythm AI
+- **Album Cover Generation**: Automatically generate matching album artwork using Flux AI
+- **Audio Input Options**: Upload audio files or record directly in the browser
+- **Style Customization**: Choose from multiple music genres (pop, rock, jazz, classical, etc.)
+- **Real-time Recording**: Built-in microphone recording with visual feedback
+- **Instrument Configuration**: Specify instruments, BPM, and time signature
+- **Cost Estimation**: See generation costs before processing
+- **Responsive Design**: Modern UI with Tailwind CSS
 
-### `npm start`
+## 🚀 Quick Start
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Prerequisites
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Node.js 16+ 
+- Python 3.6+ (for audio processing utilities)
+- Modern web browser with microphone access
 
-### `npm test`
+### Installation
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd virtualband
+   ```
 
-### `npm run build`
+2. **Install Node.js dependencies**
+   ```bash
+   npm install
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. **Install Python dependencies** (optional)
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+4. **Start the development server**
+   ```bash
+   npm start
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+5. **Open your browser**
+   Navigate to `http://localhost:3000`
 
-### `npm run eject`
+## 🎯 How to Use
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### 1. **Configure Music Settings**
+- Select your preferred music style (pop, rock, jazz, etc.)
+- Choose duration (short 1.35 min or full 4.45 min)
+- Specify instruments (comma-separated: "piano, guitar, drums")
+- Set BPM and time signature
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 2. **Provide Audio Reference** (Optional)
+- **Upload**: Click "Upload a Recording" to select an audio file
+- **Record**: Click "Record Yourself" to record directly in the browser
+- The AI will use this as a style reference for generation
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 3. **Enter Lyrics**
+- Type your lyrics in the chat interface
+- Lyrics are automatically timestamped for proper synchronization
+- The system will generate both music and album cover
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 4. **Generate & Enjoy**
+- Click "Generate Music + Cover" to start the process
+- Monitor progress with real-time status updates
+- Download your generated audio and album cover
 
-## Learn More
+## 🛠️ Technical Details
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Frontend Architecture
+- **React 19**: Modern React with hooks and functional components
+- **Tailwind CSS**: Utility-first CSS framework for styling
+- **Web Audio API**: Browser-based audio recording and playback
+- **Responsive Design**: Mobile-friendly interface
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### AI Integration
+- **DiffRhythm API**: Music generation from text and audio
+- **Flux API**: AI-powered album cover generation
+- **Real-time Polling**: Status monitoring for long-running tasks
+- **Error Handling**: Comprehensive error management and user feedback
 
-### Code Splitting
+### Audio Processing
+- **Base64 Encoding**: Audio conversion for API compatibility
+- **Multiple Formats**: Support for MP3, WAV, WebM, and more
+- **Browser Recording**: MediaRecorder API for direct recording
+- **File Upload**: Drag-and-drop audio file support
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 📁 Project Structure
 
-### Analyzing the Bundle Size
+```
+virtualband/
+├── src/
+│   ├── App.js              # Main application component
+│   ├── apiService.js       # AI API integration
+│   ├── App.css            # Application styles
+│   └── index.js           # React entry point
+├── public/                # Static assets
+├── audio_to_base64.py    # Python audio conversion utility
+├── example_usage.py      # Python usage examples
+├── requirements.txt      # Python dependencies
+├── package.json          # Node.js dependencies
+└── tailwind.config.js    # Tailwind configuration
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## 🔧 API Configuration
 
-### Making a Progressive Web App
+The application uses the following AI services:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### DiffRhythm API (Music Generation)
+- **Model**: `Qubico/diffrhythm`
+- **Task Types**: `txt2audio-base`, `txt2audio-full`
+- **Features**: Style transfer, instrument specification, BPM control
 
-### Advanced Configuration
+### Flux API (Image Generation)
+- **Model**: `Qubico/flux1-dev`
+- **Output**: 1024x1024 album covers
+- **Features**: Style-aware generation, lyrics-based prompts
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### API Key Setup
+Update the API key in `src/apiService.js`:
+```javascript
+const API_KEY = 'your-api-key-here';
+```
 
-### Deployment
+## 🎨 Customization
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Adding New Music Styles
+Edit the style options in `src/App.js`:
+```javascript
+<option value="your-style">Your Style</option>
+```
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Modifying Generation Parameters
+Update the API request body in `src/apiService.js`:
+```javascript
+const requestBody = {
+    model: 'Qubico/diffrhythm',
+    task_type: taskType,
+    input: {
+        lyrics: lyrics,
+        style_prompt: stylePrompt,
+        style_audio: styleAudio
+    }
+};
+```
